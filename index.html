@@ -172,7 +172,7 @@ h1{margin:0;text-align:center;font-size:2rem;letter-spacing:.5px}
     </div>
 
     <button id="startBtn" class="primary" data-i18n="start"></button>
-    <button id="installBtn" class="secondary hidden" data-i18n="install"></button>
+    <button id="installBtn" class="secondary" data-i18n="install"></button>
     <div id="iosHint" class="hint hidden" data-i18n="iosHint"></div>
   </div>
 </div>
@@ -201,6 +201,16 @@ h1{margin:0;text-align:center;font-size:2rem;letter-spacing:.5px}
 <div id="overModal" class="modal hidden">
   <div class="panel"><p data-i18n="gameOver"></p><h2 id="overTitle"></h2>
     <div class="row"><button class="primary" id="btnRematch" data-i18n="rematch"></button><button class="secondary" id="btnOverMenu" data-i18n="mainMenu"></button></div>
+  </div>
+</div>
+<!-- Install help modal -->
+<div id="installModal" class="modal hidden">
+  <div class="panel" style="text-align:left">
+    <h2 data-i18n="installTitle" style="text-align:center"></h2>
+    <p><b data-i18n="instAndroidH"></b><br><span data-i18n="instAndroid"></span></p>
+    <p><b data-i18n="instDesktopH"></b><br><span data-i18n="instDesktop"></span></p>
+    <p><b data-i18n="instIOSH"></b><br><span data-i18n="instIOS"></span></p>
+    <button class="primary" id="installClose" data-i18n="close"></button>
   </div>
 </div>
 <div id="ghost" class="hidden"></div>
@@ -354,7 +364,11 @@ const I18N = {
     mateWhite: 'Checkmate! White Wins', mateBlack: 'Checkmate! Black Wins',
     stalemate: 'Draw by Stalemate', threefold: 'Draw by Repetition',
     fifty: 'Draw by 50-Move Rule', insufficient: 'Draw by Insufficient Material', draw: 'Draw',
-    rematch: 'Rematch', mainMenu: 'Main Menu', langLabel: 'Language'
+    rematch: 'Rematch', mainMenu: 'Main Menu', langLabel: 'Language',
+    installTitle: 'Install App', close: 'Close',
+    instAndroidH: 'Android (Chrome)', instAndroid: 'Tap the ⋮ menu, then "Install app" or "Add to Home screen".',
+    instDesktopH: 'Desktop (Chrome / Edge)', instDesktop: 'Click the install icon at the right end of the address bar, or open the ⋮ menu and choose "Install Chess".',
+    instIOSH: 'iPhone / iPad (Safari)', instIOS: 'Tap the Share button, then "Add to Home Screen".'
   },
   tr: {
     title: 'Satranç', subtitle: 'Klasik satranç, her yerde, çevrimdışı.',
@@ -374,7 +388,11 @@ const I18N = {
     mateWhite: 'Şah Mat! Beyaz Kazandı', mateBlack: 'Şah Mat! Siyah Kazandı',
     stalemate: 'Pat ile Berabere', threefold: 'Tekrar ile Berabere',
     fifty: '50 Hamle Kuralı ile Berabere', insufficient: 'Yetersiz Materyal ile Berabere', draw: 'Berabere',
-    rematch: 'Rövanş', mainMenu: 'Ana Menü', langLabel: 'Dil'
+    rematch: 'Rövanş', mainMenu: 'Ana Menü', langLabel: 'Dil',
+    installTitle: 'Uygulamayı Yükle', close: 'Kapat',
+    instAndroidH: 'Android (Chrome)', instAndroid: '⋮ menüsüne dokunun, ardından "Uygulamayı yükle" veya "Ana ekrana ekle"yi seçin.',
+    instDesktopH: 'Masaüstü (Chrome / Edge)', instDesktop: 'Adres çubuğunun sağ ucundaki yükle simgesine tıklayın veya ⋮ menüsünden "Chess Uygulamasını Yükle"yi seçin.',
+    instIOSH: 'iPhone / iPad (Safari)', instIOS: 'Paylaş düğmesine dokunun, ardından "Ana Ekrana Ekle"yi seçin.'
   }
 };
 let lang = localStorage.getItem('chess-lang') === 'tr' ? 'tr' : 'en';
@@ -779,17 +797,18 @@ $('startBtn').onclick = startGame;
 let deferredPrompt = null;
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault(); deferredPrompt = e;
-  if (!isStandalone) $('installBtn').classList.remove('hidden');
-});
+if (isStandalone) $('installBtn').classList.add('hidden');
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
 $('installBtn').onclick = async () => {
-  if (!deferredPrompt) return;
-  deferredPrompt.prompt();
-  try { await deferredPrompt.userChoice; } catch (_) {}
-  deferredPrompt = null; $('installBtn').classList.add('hidden');
+  if (deferredPrompt) {
+    const p = deferredPrompt; deferredPrompt = null;
+    p.prompt();
+    try { const r = await p.userChoice; if (r && r.outcome === 'accepted') $('installBtn').classList.add('hidden'); } catch (_) {}
+  } else $('installModal').classList.remove('hidden');
 };
-window.addEventListener('appinstalled', () => { deferredPrompt = null; $('installBtn').classList.add('hidden'); $('iosHint').classList.add('hidden'); });
+$('installClose').onclick = () => $('installModal').classList.add('hidden');
+$('installModal').onclick = (e) => { if (e.target === $('installModal')) $('installModal').classList.add('hidden'); };
+window.addEventListener('appinstalled', () => { deferredPrompt = null; $('installBtn').classList.add('hidden'); $('iosHint').classList.add('hidden'); $('installModal').classList.add('hidden'); });
 if (isIOS && !isStandalone) $('iosHint').classList.remove('hidden');
 
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
