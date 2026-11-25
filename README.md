@@ -1,0 +1,1 @@
+A lightweight, installable Chess Progressive Web App built with vanilla JavaScript and chess.js. It has a custom minimax AI with alpha-beta pruning, piece-square tables and quiescence search. It also has tap and drag-and-drop controls, a 2-player pass & play mode and Web Audio sound effects. It works fully offline and supports English and Turkish.
